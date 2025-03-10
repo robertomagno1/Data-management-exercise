@@ -21,7 +21,8 @@ create table Employee (
 ### – Character:
 char(n)or character(n)
 varchar(n) (or char varying(n))
-nchar(n)and nvarchar(n) (or nchar varying(n)) (UNICODE)
+nchar(n)and nvarchar(n) 
+(or nchar varying(n)) (UNICODE)
 ## – Numeric:
 # int or  integer, smallint
 numeric, (or numeric(p), numeric(p,s))
