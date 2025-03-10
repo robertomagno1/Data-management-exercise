@@ -13,6 +13,8 @@ create table Employee (
 )
 
 # unique vs forein key : unique is on a pair of columns ... two peopole on the same app 
+## referencial internity constraint 
+
 
 
  ##Predefined domains
