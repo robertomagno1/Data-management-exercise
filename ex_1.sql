@@ -37,3 +37,5 @@ bit varying(n)
 ## – Further domanis (introduced in SQL:1999)
 boolean
 BLOB, CLOB, NCLOB (binary/character large object)
+
+
