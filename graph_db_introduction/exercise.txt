@@ -1,0 +1,256 @@
+// just some exericse to compute on neo4j desktop , based on "build_db".... 
+===
+
+CREATE (TomH:Actor)
+CREATE (RonH:Director)
+SET TomH.name='Tom Hanks'
+SET RonH.name='Ron Howard'
+CREATE (TheDaVinciCode:Movie {title:'The Da Vinci Code'})
+SET TomH:Person
+SET RonH:Person
+CREATE (TomH)-[r:ACTED_IN ]->(TheDaVinciCode)
+SET r.roles=['Dr. Robert Langdon']
+CREATE (TomH)-[:KNOWS {since:1987}]->(RonH)
+
+-- 
+-The DB is schemaless, but it is possible to ask for some metadata:
+
+-query that returns all distinct combinations of labels
+
+MATCH (n) RETURN distinct labels(n)
+
+-query that returns all labels of a node (or nodes) satisfying some property
+
+MATCH (n {name:'Tom Hanks'}) 
+RETURN labels(n)
+
+-query to return the type of all relationships
+
+MATCH ()-[r]-() RETURN DISTINCT type(r)
+
+-visualize the "schema"
+
+call db.schema.visualization()
+
+--
+
+-Try to add an edge
+
+CREATE (TomH)-[:FRIEND_OF]->(RonH)
+
+--
+
+-to refer to a node using its id, use the id() function. Example
+
+MATCH(n) WHERE id(n)=3 DETACH DELETE n
+MATCH(n) WHERE id(n) in [3,4] DETACH DELETE n
+
+--
+Add a value in the array
+
+MATCH (TomH)-[r:ACTED_IN ]->(TheDaVinciCode)
+SET r.roles = r.roles + 'anotherRole'
+
+--
+
+- command to remove all nodes (even if they are involved in relationships). 
+- This eliminates also the ingoing and outgoing edges for the deleted node.
+- Without the detach option the node is not deleted if it has ingloing or outgoing edges.
+
+MATCH (n) detach delete n
+
+- command to eliminate all edges
+
+MATCH ()-[r]-() delete r
+
+--
+-SET overwrite previous values. Use remove to eliminate a property
+
+MATCH (TheDaVinciCode)<-[:ACTED_IN]-(TomH:Actor {name:'Tom Hanks'})
+SET TomH.born=1956
+REMOVE TheDaVinciCode.tagline
+
+
+alternative syntax
+
+MATCH (TheDaVinciCode)<-[:ACTED_IN]-(TomH:Actor {name:'Tom Hanks'})
+SET TomH.born=TomH.born+6 
+SET TheDaVinciCode.tagline=null
+
+--
+
+-A first "complex query"
+
+-Return the titles of the films directed by Ron Howard where Tom Hanks acted in
+
+MATCH (node1)-[:ACTED_IN]->(node2)<-[:DIRECTED]-(node3) 
+WHERE node1.name="Tom Hanks" AND node3.name="Ron Howard" 
+RETURN  node2.title as title
+
+-Alternative syntax
+
+MATCH(node1:Person{name:"Tom Hanks"})-[:ACTED_IN]->(node2)<-[:DIRECTED]-(node3 {name:"Ron Howard"}) 
+RETURN node2.title as title
+
+
+---
+
+- EXECUTE THE SCRIPT Neo4jActorDBScript.txt, before executing the next queries 
+
+--
+
+-Regular expressions to search text
+
+MATCH (n) WHERE n:Person and (n.name =~'Ron .*' OR n.name =~'John .*') return n.name
+
+-matches on label
+
+MATCH (n)
+WHERE n:Movie
+RETURN n.title, n.released, n.tagline
+
+-matches on multiple relationships types
+
+MATCH ({ title: 'Top Gun' })<-[:ACTED_IN|:DIRECTED]-(person)
+RETURN person.name
+
+-alternative formulation
+
+MATCH ({ title: 'Top Gun' })<-[r]-(person)
+where type(r)='ACTED_IN' OR type(r)='DIRECTED'
+RETURN person.name
+
+-Find people who acted in the movie they directed
+
+MATCH (a)-[:ACTED_IN]->(m)<-[:DIRECTED]-(a)
+RETURN a
+
+-notice that 
+
+MATCH (a)-[:ACTED_IN]->(m)<-[:DIRECTED]-(d)
+WHERE a.name = d.name
+RETURN a
+
+-is not the same (even though it returns the same answer in the example)
+
+-other commands and examples
+
+MATCH (s) WHERE ID(s)=100 RETURN s
+
+-how many people in the database
+
+MATCH (n:Person) RETURN count(*)
+
+-average rating of The Da Vinci Code
+
+Match ()-[r :REVIEWED ]->(m {title:'The Da Vinci Code'})
+return avg(r.rating)
+
+-all director names together with the number of persons they directed 
+
+
+match (n)-[:DIRECTED]->()<-[:ACTED_IN]-(p)
+return n.name, count(distinct p)
+
+-Top 5 actors per number of movies they acted in (return the name and the number of movies)
+
+match (n)-[:ACTED_IN]->()
+return n.name, count(*) AS numberOfMovies
+order by numberOfMovies desc
+limit 5
+
+-The above statement can be alternatively expressed using 'with'
+
+match (n)-[:ACTED_IN]->()
+with count(*) AS numberOfMovies, n
+return n.name, numberOfMovies
+order by numberOfMovies desc
+limit 5
+
+
+-the following one instead cannot be done without the use of 'with':
+
+-among people that acted in less than 10 movies, return the top 5 people 
+-per number of movies they acted in (return the person name and the number 
+-of movies in which he/she acted)
+
+match (n)-[:ACTED_IN]->()
+with count(*) AS numberOfMovies, n
+where numberOfMovies <10
+return n.name, numberOfMovies
+order by numberOfMovies desc
+limit 5
+
+---
+
+-PATH
+
+CREATE(a:Ex {name:'a'})-[:FRIEND_OF]->(b:Ex {name:'b'})
+CREATE(b)-[:FRIEND_OF]->(c:Ex {name:'c'})
+CREATE(c)-[:FRIEND_OF]->(d:Ex {name:'d'})
+
+-the following snippet code adds for each node in the path 
+-an attribute called marked and valued to true
+
+MATCH p =(begin)-[*]->(end)
+WHERE begin.name = 'a' AND end.name = 'd'
+FOREACH (n IN nodes(p)| SET n.marked = TRUE )
+
+-return all pairs 'a' x such that there is a path from 'a' to x
+
+MATCH (begin)-[*]->(end)
+WHERE begin.name = 'a' 
+RETURN begin, end
+
+-return all pairs p,fof such that there is a path of FRIENDS_OF relations from p to fof
+
+MATCH (p:Ex)-[:FRIEND_OF*2..3]->(fof:Ex)
+RETURN p, fof
+
+
+INDEXES:
+
+Create indexes:
+CREATE INDEX myindex FOR (n:Person) ON (n.name)
+
+Note: the sandbox version of Neo4j only support old syntax (now deprecated) for creating indexes, i.e.,
+CREATE INDEX ON :Person(name)
+
+
+Ask for all indexes:
+call db.indexes
+
+Remove indexes
+DROP INDEX ON :Person(name)
+
+----
+
+negation
+
+-Never directed by ron Howard
+MATCH (n:Person)
+WHERE not exists ((n)-[:ACTED_IN]->(:Movie)<-[:DIRECTED]-(:Person {name: 'Ron Howard'}))
+RETURN n.name
+
+
+====
+
+.constraints
+
+CREATE CONSTRAINT constraint_name_unique
+ON (p:Person) ASSERT p.name IS UNIQUE
+
+
+CREATE CONSTRAINT constraint_name_existence
+ON (p:Person) ASSERT EXISTS (p.name)
+
+CREATE CONSTRAINT constraint_acted_in
+ON ()-[like:LIKED]-() ASSERT EXISTS (like.day)
+
+-compound keys
+
+CREATE CONSTRAINT constraint_name
+ON (n:Person) ASSERT (n.firstname, n.surname) IS NODE KEY
+
+
+
