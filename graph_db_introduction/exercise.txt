@@ -1,4 +1,4 @@
-// just some exericse to compute on neo4j desktop , based on "build_db".... 
+// just some exericse to compute on neo4j desktop , based on "build_db"
 ===
 
 CREATE (TomH:Actor)
