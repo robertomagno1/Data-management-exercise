@@ -1,4 +1,4 @@
-## just to start learning neo4j in cypher : 
+## just to start learning neo4j and cypher : 
 
 CREATE (TheMatrix:Movie {title:'The Matrix', released:1999, tagline:'Welcome to the Real World'})
 CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
